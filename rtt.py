@@ -63,11 +63,11 @@ def scan(controller, path):
 with stem.control.Controller.from_port() as controller:
     controller.authenticate()
 
-relay_fingerprints = [desc.fingerprint for desc in controller.get_network_statuses()]
+    relay_fingerprints = [desc.fingerprint for desc in controller.get_network_statuses()]
 
-for fingerprint in relay_fingerprints:
-    try:
-        time_taken = scan(controller, [fingerprint, EXIT_FINGERPRINT])
-    print('%s => %0.2f seconds' % (fingerprint, time_taken))
-    except Exception as exc:
-        print('%s => %s' % (fingerprint, exc))
+    for fingerprint in relay_fingerprints:
+        try:
+            time_taken = scan(controller, [fingerprint, EXIT_FINGERPRINT])
+            print('%s => %0.2f seconds' % (fingerprint, time_taken))
+        except Exception as exc:
+            print('%s => %s' % (fingerprint, exc))
