@@ -3,12 +3,10 @@ import io
 import pycurl
 import stem.control
 
-# Static exit for us to make 2-hop circuits through. Picking aurora, a
-# particularly beefy one...
-#
-#   https://metrics.torproject.org/rs.html#details/379FB450010D17078B3766C2273303C358C3A442
-
-EXIT_FINGERPRINT = '379FB450010D17078B3766C2273303C358C3A442'
+# Exit node. 
+# Currently set to: TorOrDie4privacyNET. 
+# Based in US, IP addr: 104.244.73.43:443
+EXIT_FINGERPRINT = '376DC7CAD597D3A4CBB651999CFAD0E77DC9AE8C'
 
 SOCKS_PORT = 9050
 CONNECTION_TIMEOUT = 30
