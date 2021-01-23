@@ -1,8 +1,6 @@
 import io
-import time
 
 import pycurl
-
 import stem.control
 
 # Static exit for us to make 2-hop circuits through. Picking aurora, a
@@ -31,10 +29,10 @@ def query_RTT(url):
 
     try:
         query.perform()
-
-        return query.getinfo(pycurl.CONNECT_TIME)
     except pycurl.error as exc:
         raise ValueError(f"Unable to reach {url} ({exc})")
+
+    return query.getinfo(pycurl.CONNECT_TIME)
 
 
 def scan(controller, path):
@@ -43,6 +41,7 @@ def scan(controller, path):
     the time it took.
     """
 
+    # Set up a new circuit, blocking until the circuit is set up. 
     circuit_id = controller.new_circuit(path, await_build=True)
 
     def attach_stream(stream):
@@ -52,27 +51,25 @@ def scan(controller, path):
 
     try:
         controller.set_conf('__LeaveStreamsUnattached', '1') 
-        start_time = time.time()
 
-        check_page = query('https://check.torproject.org/')
+        rtt = query('https://check.torproject.org/')
 
         if 'Congratulations. This browser is configured to use Tor.' not in check_page:
             raise ValueError("Request didn't have the right content")
 
-        return time.time() - start_time
     finally:
         controller.remove_event_listener(attach_stream)
         controller.reset_conf('__LeaveStreamsUnattached')
 
 
-    with stem.control.Controller.from_port() as controller:
-        controller.authenticate()
+with stem.control.Controller.from_port() as controller:
+    controller.authenticate()
 
-    relay_fingerprints = [desc.fingerprint for desc in controller.get_network_statuses()]
+relay_fingerprints = [desc.fingerprint for desc in controller.get_network_statuses()]
 
-    for fingerprint in relay_fingerprints:
-        try:
-            time_taken = scan(controller, [fingerprint, EXIT_FINGERPRINT])
-        print('%s => %0.2f seconds' % (fingerprint, time_taken))
-        except Exception as exc:
-            print('%s => %s' % (fingerprint, exc))
+for fingerprint in relay_fingerprints:
+    try:
+        time_taken = scan(controller, [fingerprint, EXIT_FINGERPRINT])
+    print('%s => %0.2f seconds' % (fingerprint, time_taken))
+    except Exception as exc:
+        print('%s => %s' % (fingerprint, exc))
