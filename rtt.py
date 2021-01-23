@@ -11,7 +11,7 @@ EXIT_FINGERPRINT = '376DC7CAD597D3A4CBB651999CFAD0E77DC9AE8C'
 SOCKS_PORT = 9050
 CONNECTION_TIMEOUT = 30
 
-def query_RTT(url):
+def query(url):
     """Use pycurl to fetch a site using the proxy on the SOCKS_PORT."""
 
     output = open('/dev/null', 'wb')
