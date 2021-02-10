@@ -1,5 +1,8 @@
 import os.path
 
+# TODO: allow concurrent requests, either through AIOHttp or 
+import multiprocessing
+
 import pandas as pd
 import pycurl
 import stem.control
@@ -50,41 +53,14 @@ def main():
 
     query_output_file.close()
 
-    # Write the data to our data file.
+    # Append or write the data to DATA_FILE.
+    csv_columns = ['test_date', 'url', 'resource', 'transfer_time']
     if os.path.isfile(DATA_FILE):
         df = pd.read_csv(DATA_FILE)
     else:
-        df = pd.DataFrame(columns=['test_date', 'url', 'resource',
-                                   'transfer_time'])
-    df = df.append(pd.DataFrame(benchmark_data,
-                                columns=['test_date', 'url', 'resource', 'transfer_time']))
+        df = pd.DataFrame(columns=csv_columns)
+    df = df.append(pd.DataFrame(benchmark_data, columns=csv_columns))
     df.to_csv(DATA_FILE, index=False)
-
-
-def query(url, output_file):
-    """Use pycurl to fetch a site using the tor proxy on the SOCKS_PORT.
-
-    Parameters: 
-        url: The url to fetch. 
-        output_file: The file-like object to write the returned data to.
-    Returns: 
-        The total transfer time of the connection. 
-    """
-
-    query = pycurl.Curl()
-    query.setopt(pycurl.URL, url)
-    query.setopt(pycurl.PROXY, 'localhost')
-    query.setopt(pycurl.PROXYPORT, SOCKS_PORT)
-    query.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5_HOSTNAME)
-    query.setopt(pycurl.CONNECTTIMEOUT, CONNECTION_TIMEOUT)
-    query.setopt(pycurl.WRITEFUNCTION, output_file.write)
-
-    try:
-        query.perform()
-    except pycurl.error as exc:
-        raise ConnectionError(f"Unable to reach {url} ({exc})")
-
-    return query.getinfo(pycurl.TOTAL_TIME)
 
 
 def get_circuit_time(tor_controller, path):
