@@ -31,15 +31,24 @@ def main():
         data = pd.DataFrame(
                 columns=['test_date', 'url', 'resource', 'transfer_time'])
 
-    with stem.control.Controller.from_port() as controller:
-        controller.authenticate()
 
-        for relay in itertools.islice(controller.get_network_statuses(), 50): 
-            total_time = get_circuit_time(controller, 
-                    [relay.fingerprint, EXIT_FINGERPRINT])
-            print(f'{relay.address},{total_time}')
+    output_file = open('output.html', 'wb')
+    query = pycurl.Curl()
+    query.setopt(pycurl.URL, URL)
+    query.setopt(pycurl.PROXY, 'localhost')
+    query.setopt(pycurl.PROXYPORT, SOCKS_PORT)
+    query.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5_HOSTNAME)
+    query.setopt(pycurl.CONNECTTIMEOUT, CONNECTION_TIMEOUT)
+    query.setopt(pycurl.WRITEFUNCTION, output_file.write)
+    try:
+        query.perform()
+    except pycurl.error as exc:
+        raise ConnectionError(f"Unable to reach {URL} ({exc})")
 
-    data.to_csv(DATA_FILE)
+    output_file.close()
+
+    data.append([pd.Timestamp.now, URL, '', query.getinfo(pycurl.TOTAL_TIME)])
+    data.to_csv(DATA_FILE, index=False)
 
 
 def query(url, output_file):
