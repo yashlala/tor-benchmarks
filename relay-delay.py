@@ -25,12 +25,8 @@ CONNECTION_TIMEOUT = 10
 
 
 def main(): 
-    if os.path.isfile(DATA_FILE): 
-        data = pd.read_csv(DATA_FILE)
-    else: 
-        data = pd.DataFrame(
-                columns=['test_date', 'url', 'resource', 'transfer_time'])
 
+    benchmark_data = []
 
     output_file = open('output.html', 'wb')
     query = pycurl.Curl()
@@ -44,11 +40,22 @@ def main():
         query.perform()
     except pycurl.error as exc:
         raise ConnectionError(f"Unable to reach {URL} ({exc})")
-
     output_file.close()
 
-    data.append([pd.Timestamp.now, URL, '', query.getinfo(pycurl.TOTAL_TIME)])
-    data.to_csv(DATA_FILE, index=False)
+    benchmark_data.append((pd.Timestamp.now(), URL, '',
+        query.getinfo(pycurl.TOTAL_TIME)))
+
+    # Write data to our log file. 
+    if os.path.isfile(DATA_FILE): 
+        df = pd.read_csv(DATA_FILE)
+    else: 
+        df = pd.DataFrame(
+                columns=['test_date', 'url', 'resource', 'transfer_time'])
+    benchmark_df = pd.DataFrame(benchmark_data, 
+            columns=['test_date', 'url', 'resource', 'transfer_time'])
+    df = df.append(benchmark_df)
+    df.to_csv(DATA_FILE, index=False)
+
 
 
 def query(url, output_file):
