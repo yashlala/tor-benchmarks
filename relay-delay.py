@@ -1,25 +1,54 @@
 import io
+import os.path
 import itertools
 
+import pandas as pd
 import pycurl
 import stem.control
 
-# Exit node. 
+
+# URL + HTTP resources we're fetching data from. 
+URL = 'http://104.154.161.181:5003/'
+URL_RESOURCES = [f'download{i}' for i in range(1, 6)]
+
+# Data logging location. 
+DATA_FILE = 'tor-benchmarks.csv'
+
+# Fingerprint of the TOR exit node. 
 # Currently set to: TorOrDie4privacyNET. 
 # Based in US, IP addr: 104.244.73.43:443
 EXIT_FINGERPRINT = '376DC7CAD597D3A4CBB651999CFAD0E77DC9AE8C'
+
+# Local TOR proxy configuration. 
 SOCKS_PORT = 9050
 CONNECTION_TIMEOUT = 10
-URL = 'https://google.com/'
+
+
+def main(): 
+    if os.path.isfile(DATA_FILE): 
+        data = pd.read_csv(DATA_FILE)
+    else: 
+        data = pd.DataFrame(
+                columns=['test_date', 'url', 'resource', 'transfer_time'])
+
+    with stem.control.Controller.from_port() as controller:
+        controller.authenticate()
+
+        for relay in itertools.islice(controller.get_network_statuses(), 50): 
+            total_time = get_circuit_time(controller, 
+                    [relay.fingerprint, EXIT_FINGERPRINT])
+            print(f'{relay.address},{total_time}')
+
+    data.to_csv(DATA_FILE)
 
 
 def query(url, output_file):
     """Use pycurl to fetch a site using the tor proxy on the SOCKS_PORT.
 
     Parameters: 
-        url: The url to fetch. Does not yet resolve raw IP addresses. 
+        url: The url to fetch. 
         output_file: The file-like object to write the returned data to.
-    Returned Values: 
+    Returns: 
         The total transfer time of the connection. 
     """
 
@@ -67,17 +96,6 @@ def get_circuit_time(tor_controller, path):
         tor_controller.close_circuit(circuit_id)
 
     return transfer_time
-
-
-def main(): 
-    with stem.control.Controller.from_port() as controller:
-        print('address,rtt')
-        controller.authenticate()
-
-        for relay in itertools.islice(controller.get_network_statuses(), 50): 
-            rtt = get_circuit_time(controller, 
-                    [relay.fingerprint, EXIT_FINGERPRINT])
-            print(f'{relay.address},{rtt}')
 
 
 if __name__ == '__main__': 
