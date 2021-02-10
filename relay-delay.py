@@ -25,35 +25,42 @@ CONNECTION_TIMEOUT = 10
 
 
 def main(): 
-
     benchmark_data = []
+    query_output_file = open('/dev/null', 'wb')
 
-    output_file = open('output.html', 'wb')
-    query = pycurl.Curl()
-    query.setopt(pycurl.URL, URL)
-    query.setopt(pycurl.PROXY, 'localhost')
-    query.setopt(pycurl.PROXYPORT, SOCKS_PORT)
-    query.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5_HOSTNAME)
-    query.setopt(pycurl.CONNECTTIMEOUT, CONNECTION_TIMEOUT)
-    query.setopt(pycurl.WRITEFUNCTION, output_file.write)
-    try:
-        query.perform()
-    except pycurl.error as exc:
-        raise ConnectionError(f"Unable to reach {URL} ({exc})")
-    output_file.close()
+    # Fetch every resource in our list, benchmarking our queries. 
+    for resource in URL_RESOURCES: 
+        resource_url = f'{URL}{resource}'
 
-    benchmark_data.append((pd.Timestamp.now(), URL, '',
-        query.getinfo(pycurl.TOTAL_TIME)))
+        print(f"Fetching '{resource_url}'")
 
-    # Write data to our log file. 
+        query = pycurl.Curl()
+        query.setopt(pycurl.URL, resource_url)
+        query.setopt(pycurl.CONNECTTIMEOUT, CONNECTION_TIMEOUT)
+        query.setopt(pycurl.WRITEFUNCTION, query_output_file.write)
+        # TODO: re-enable socks proxy. we want to actually use tor, right? 
+        # query.setopt(pycurl.PROXY, 'localhost')
+        # query.setopt(pycurl.PROXYPORT, SOCKS_PORT)
+        # query.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5_HOSTNAME)
+        try:
+            query.perform()
+        except pycurl.error as exc:
+            raise ConnectionError(f"Unable to reach {URL} ({exc})")
+
+        benchmark_data.append((pd.Timestamp.now(), URL, resource,
+            query.getinfo(pycurl.TOTAL_TIME)))
+
+    query_output_file.close()
+
+
+    # Write the data to our data file. 
     if os.path.isfile(DATA_FILE): 
         df = pd.read_csv(DATA_FILE)
     else: 
         df = pd.DataFrame(
                 columns=['test_date', 'url', 'resource', 'transfer_time'])
-    benchmark_df = pd.DataFrame(benchmark_data, 
-            columns=['test_date', 'url', 'resource', 'transfer_time'])
-    df = df.append(benchmark_df)
+    df = df.append(pd.DataFrame(benchmark_data, 
+            columns=['test_date', 'url', 'resource', 'transfer_time']))
     df.to_csv(DATA_FILE, index=False)
 
 
