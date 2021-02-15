@@ -1,7 +1,6 @@
 import os.path
-
-# TODO: allow concurrent requests, either through AIOHttp or 
-import multiprocessing
+import aiohttp
+from aiohttp_socks import ProxyConnector
 
 import pandas as pd
 import pycurl
@@ -20,17 +19,19 @@ DATA_FILE = 'tor-benchmarks.csv'
 # Based in US, IP addr: 104.244.73.43:443
 EXIT_FINGERPRINT = '376DC7CAD597D3A4CBB651999CFAD0E77DC9AE8C'
 
-# Local TOR proxy configuration.
-SOCKS_PORT = 9050
-CONNECTION_TIMEOUT = 10
-
 
 def main():
     benchmark_data = []
     query_output_file = open('/dev/null', 'wb')
 
+
     # Fetch every resource in our list, benchmarking our queries.
     for resource in URL_RESOURCES:
+        connector = ProxyConnector.from_url('socks5://localhost:9050')
+        async with aiohttp.ClientSession(connector=connector) as session:
+                async with session.get(url) as response:
+                    return await response.text()
+
         resource_url = f'{URL}{resource}'
 
         print(f"Fetching '{resource_url}'")
@@ -61,6 +62,8 @@ def main():
         df = pd.DataFrame(columns=csv_columns)
     df = df.append(pd.DataFrame(benchmark_data, columns=csv_columns))
     df.to_csv(DATA_FILE, index=False)
+
+
 
 
 def get_circuit_time(tor_controller, path):
