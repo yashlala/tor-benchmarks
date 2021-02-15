@@ -58,12 +58,14 @@ def main():
 
         print(f'Took {time_elapsed} seconds')
 
+        # TODO: variable number of relays. 
         benchmark_data.append((pd.Timestamp.now(), url, resource,
-            ntimes_to_fetch, time_elapsed))
+            ntimes_to_fetch, 3, time_elapsed))
 
     # Append or write the data to our data file.
     data_file = 'tor-benchmarks.csv'
-    csv_columns = ['test_date', 'url', 'resource', 'times_fetched', 'transfer_time']
+    csv_columns = ['test_date', 'url', 'resource', 'times_fetched',
+            'num_relays', 'transfer_time']
     if os.path.isfile(data_file):
         df = pd.read_csv(data_file)
     else:
