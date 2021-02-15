@@ -33,9 +33,6 @@ def main():
         }
 
     for resource, size in resources.items(): 
-        resource_url = f'{url}{resource}' 
-        ntimes_to_fetch = 100 // size
-
         async def fetch_page(url): 
             # Set up an AIO-compatible wrapper around our SOCKS proxy. 
             connector = ProxyConnector.from_url('socks5://localhost:9050')
@@ -44,15 +41,17 @@ def main():
                 async with session.get(url) as response:
                     return response.ok
 
-        async def fetch_page_ntimes():
-            status_codes = await asyncio.gather(*[fetch_page(resource_url)] * ntimes_to_fetch)
+        async def fetch_page_ntimes(url, ntimes):
+            status_codes = await asyncio.gather(*[fetch_page(url)] * ntimes)
             assert all(status_codes)
+
+        resource_url = f'{url}{resource}' 
+        ntimes_to_fetch = 100 // size
 
         print(f"Fetching '{resource_url}'")
 
         t1 = timeit.default_timer()
-        # asyncio.run(fetch_page(f'{url}download5'))
-        asyncio.run(fetch_page_ntimes())
+        asyncio.run(fetch_page_ntimes(resource_url, ntimes_to_fetch))
         t2 = timeit.default_timer()
         time_elapsed = t2 - t1
 
