@@ -39,10 +39,13 @@ def main():
 
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(url) as response:
+                    # "Block" until the response has been fully fetched. 
+                    await response.text()
                     return response.ok
 
         async def fetch_page_ntimes(url, ntimes):
-            status_codes = await asyncio.gather(*[fetch_page(url)] * ntimes)
+            for _ in range(ntimes): 
+                await fetch_page(url)
             assert all(status_codes)
 
         resource_url = f'{url}{resource}' 
