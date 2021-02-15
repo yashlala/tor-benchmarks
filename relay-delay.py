@@ -44,8 +44,7 @@ def main():
 
         async def fetch_page_ntimes(url, ntimes):
             for _ in range(ntimes): 
-                await fetch_page(url)
-            assert all(status_codes)
+                assert (await fetch_page(url))
 
         resource_url = f'{url}{resource}' 
         ntimes_to_fetch = 100 // size
