@@ -5,7 +5,6 @@ import timeit
 from aiohttp_socks import ProxyConnector
 import aiohttp
 import pandas as pd
-import pycurl
 import stem.control
 
 
