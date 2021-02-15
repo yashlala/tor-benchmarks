@@ -51,18 +51,19 @@ def main():
         print(f"Fetching '{resource_url}'")
 
         t1 = timeit.default_timer()
-        asyncio.run(fetch_page(f'{url}download5'))
-        # asyncio.run(fetch_page_ntimes())
+        # asyncio.run(fetch_page(f'{url}download5'))
+        asyncio.run(fetch_page_ntimes())
         t2 = timeit.default_timer()
         time_elapsed = t2 - t1
 
         print(f'Took {time_elapsed} seconds')
 
-        benchmark_data.append((pd.Timestamp.now(), resource_url, resource, time_elapsed))
+        benchmark_data.append((pd.Timestamp.now(), url, resource,
+            ntimes_to_fetch, time_elapsed))
 
     # Append or write the data to our data file.
     data_file = 'tor-benchmarks.csv'
-    csv_columns = ['test_date', 'url', 'resource', 'transfer_time']
+    csv_columns = ['test_date', 'url', 'resource', 'times_fetched', 'transfer_time']
     if os.path.isfile(data_file):
         df = pd.read_csv(data_file)
     else:
