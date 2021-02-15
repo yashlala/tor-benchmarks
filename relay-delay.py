@@ -1,67 +1,74 @@
+import asyncio
 import os.path
-import aiohttp
-from aiohttp_socks import ProxyConnector
+import timeit
 
+from aiohttp_socks import ProxyConnector
+import aiohttp
 import pandas as pd
 import pycurl
 import stem.control
 
 
-# URL + HTTP resources we're fetching data from.
-URL = 'http://104.154.161.181:5003/'
-URL_RESOURCES = [f'download{i}' for i in range(1, 6)]
-
-# Data logging location.
-DATA_FILE = 'tor-benchmarks.csv'
+# CONSTANTS
 
 # Fingerprint of the TOR exit node.
 # Currently set to: TorOrDie4privacyNET.
 # Based in US, IP addr: 104.244.73.43:443
 EXIT_FINGERPRINT = '376DC7CAD597D3A4CBB651999CFAD0E77DC9AE8C'
 
+# Data logging location.
+
 
 def main():
     benchmark_data = []
-    query_output_file = open('/dev/null', 'wb')
 
+    url = 'http://104.154.161.181:5003/'
+    # HTTP resource name -> size in MB
+    resources = {
+            'download1': 100,
+            'download2': 50,
+            'download3': 33,
+            'download4': 25,
+            'download5': 20
+        }
 
-    # Fetch every resource in our list, benchmarking our queries.
-    for resource in URL_RESOURCES:
-        connector = ProxyConnector.from_url('socks5://localhost:9050')
-        async with aiohttp.ClientSession(connector=connector) as session:
+    for resource, size in resources.items(): 
+        resource_url = f'{url}{resource}' 
+        ntimes_to_fetch = 100 // size
+
+        async def fetch_page(url): 
+            # Set up an AIO-compatible wrapper around our SOCKS proxy. 
+            connector = ProxyConnector.from_url('socks5://localhost:9050')
+
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(url) as response:
-                    return await response.text()
+                    return response.ok
 
-        resource_url = f'{URL}{resource}'
+        async def fetch_page_ntimes():
+            status_codes = await asyncio.gather(*[fetch_page(resource_url)] * ntimes_to_fetch)
+            assert all(status_codes)
 
         print(f"Fetching '{resource_url}'")
 
-        query = pycurl.Curl()
-        query.setopt(pycurl.URL, resource_url)
-        query.setopt(pycurl.CONNECTTIMEOUT, CONNECTION_TIMEOUT)
-        query.setopt(pycurl.WRITEFUNCTION, query_output_file.write)
-        # TODO: re-enable socks proxy. we want to actually use tor, right?
-        # query.setopt(pycurl.PROXY, 'localhost')
-        # query.setopt(pycurl.PROXYPORT, SOCKS_PORT)
-        # query.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5_HOSTNAME)
-        try:
-            query.perform()
-        except pycurl.error as exc:
-            raise ConnectionError(f"Unable to reach {URL} ({exc})")
+        t1 = timeit.default_timer()
+        asyncio.run(fetch_page(f'{url}download5'))
+        # asyncio.run(fetch_page_ntimes())
+        t2 = timeit.default_timer()
+        time_elapsed = t2 - t1
 
-        benchmark_data.append((pd.Timestamp.now(), URL, resource,
-                               query.getinfo(pycurl.TOTAL_TIME)))
+        print(f'Took {time_elapsed} seconds')
 
-    query_output_file.close()
+        benchmark_data.append((pd.Timestamp.now(), resource_url, resource, time_elapsed))
 
-    # Append or write the data to DATA_FILE.
+    # Append or write the data to our data file.
+    data_file = 'tor-benchmarks.csv'
     csv_columns = ['test_date', 'url', 'resource', 'transfer_time']
-    if os.path.isfile(DATA_FILE):
-        df = pd.read_csv(DATA_FILE)
+    if os.path.isfile(data_file):
+        df = pd.read_csv(data_file)
     else:
         df = pd.DataFrame(columns=csv_columns)
     df = df.append(pd.DataFrame(benchmark_data, columns=csv_columns))
-    df.to_csv(DATA_FILE, index=False)
+    df.to_csv(data_file, index=False)
 
 
 
